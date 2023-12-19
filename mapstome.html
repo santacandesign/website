@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Emotion Map</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+  <script src="https://cdn.rawgit.com/googlemaps/v3-utility-library/master/infobox/src/infobox_packed.js"></script>
+  <script>
+    let map;
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: {
+          lat: 12.971598,
+          lng: 77.594562
+        },
+        zoom: 12,
+        mapTypeControl: false,
+        styles: styles.silver,
+      });
+
+
+
+      fetch("data1.json")
+        .then((response) => response.json())
+        .then((jsonData) => {
+          const emotionClusters = createEmotionClusters(jsonData);
+          emotionClusters.forEach((emotionCluster) => {
+            const marker = new google.maps.Marker({
+              position: emotionCluster.position,
+              map,
+              icon: emotionCluster.icon,
+              title: "Emotion Cluster",
+            });
+
+            
+
+            const infowindow = new google.maps.InfoWindow({
+              content: emotionCluster.tooltipContent,
+            });
+
+            marker.addListener("mouseover", () => {
+              marker.setIcon(createEmotionClusterIcon(emotionCluster.emotions, true));
+              infowindow.open(map, marker);
+
+        });
+
+
+
+            marker.addListener("mouseout", () => {
+              marker.setIcon(createEmotionClusterIcon(emotionCluster.emotions, false));
+              infowindow.close();
+            });
+          });
+        })
+        .catch((error) => console.error("Error fetching JSON:", error));
+    }
+
+    function createEmotionClusters(locations) {
+      const emotionClusters = [];
+
+      locations.forEach((location) => {
+        const latitude = parseFloat(location.Latitude);
+        const longitude = parseFloat(location.Longitude);
+
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+          const emotions = Object.keys(location).filter(emotion => emotion !== "Place" && emotion !== "Latitude" && emotion !== "Longitude" && location[emotion].toLowerCase() === "yes");
+
+          if (emotions.length > 0) {
+            const emotionCluster = {
+              position: {
+                lat: latitude,
+                lng: longitude,
+              },
+              emotions: emotions,
+              icon: createEmotionClusterIcon(emotions, false),
+              tooltipContent: createTooltipContent(location),
+            };
+
+            emotionClusters.push(emotionCluster);
+          }
+        }
+      });
+
+      return emotionClusters;
+    }
+
+    function createEmotionClusterIcon(emotions, isHovered) {
+      const clusterColor = `rgba(255,251,224,${isHovered ? 1 : 0.7})`;
+      const fixedClusterSize = 20; // Set a fixed size for the cluster
+      const fixedDotSize = 4; // Set a fixed size for individual dots
+
+      const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${fixedClusterSize * 2 + 2}" height="${fixedClusterSize * 2 + 2}" viewBox="0 0 ${fixedClusterSize * 2 + 2} ${fixedClusterSize * 2 + 2}">
+        <circle cx="${fixedClusterSize + 1}" cy="${fixedClusterSize + 1}" r="${fixedClusterSize}" fill="${clusterColor}" ${isHovered ? 'stroke="rgb(255,249,246)" stroke-width="2"' : ''} />
+        ${createEmotionMarkers(emotions, fixedClusterSize, fixedDotSize, isHovered).join('')}
+      </svg>`;
+
+      const clusterIcon = {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgString),
+        size: new google.maps.Size(fixedClusterSize * 3, fixedClusterSize * 3),
+        origin: new google.maps.Point(0, 0),
+        anchor: new google.maps.Point(fixedClusterSize, fixedClusterSize),
+      };
+
+      return clusterIcon;
+    }
+
+    function createEmotionMarkers(emotions, clusterRadius) {
+      const markerRadius = 4; // Fixed size for individual dots
+
+      const uniqueColors = [...new Set(emotions.map(emotion => getEmotionColor(emotion)))];
+
+      const angleIncrement = (2 * Math.PI) / uniqueColors.length;
+
+      return uniqueColors.map((color, index) => {
+        const emotionsWithColor = emotions.filter(emotion => getEmotionColor(emotion) === color);
+        const angle = index * angleIncrement;
+        let markerX, markerY;
+
+        // Adjust position based on the number of dots
+        if (uniqueColors.length === 1) {
+          // 1 dot - Centre of the cluster
+          markerX = clusterRadius;
+          markerY = clusterRadius;
+        } else if (uniqueColors.length === 2) {
+          // 2 dots - In a line, centre-aligned
+          markerX = clusterRadius + (index - 0.5) * (markerRadius * 2.5 + 8);
+          markerY = clusterRadius;
+        } else if (uniqueColors.length === 3) {
+          // 3 dots - In a triangular shape equidistant from centre and circumference of circle
+          const triangleSide = markerRadius * 2.5;
+          markerX = clusterRadius + triangleSide * Math.cos(angle);
+          markerY = clusterRadius + triangleSide * Math.sin(angle);
+        } else if (uniqueColors.length === 4) {
+          // 4 dots - In a square shape equidistant from centre and circumference of circle
+          const squareSide = markerRadius * 3;
+          markerX = clusterRadius + (index % 2 === 0 ? squareSide / 2 : -squareSide / 2);
+          markerY = clusterRadius + (index < 2 ? squareSide / 2 : -squareSide / 2);
+        } else if (uniqueColors.length === 5) {
+          // 5 dots - In a pentagon shape equidistant from centre and circumference of circle
+          const pentagonSide = markerRadius * 2;
+          const pentagonAngle = angle - (Math.PI * 0.5);
+          markerX = clusterRadius + pentagonSide * Math.cos(pentagonAngle);
+          markerY = clusterRadius + pentagonSide * Math.sin(pentagonAngle);
+        } else {
+          // For more than 5 dots, arrange in a circular pattern
+          const distanceFromCenter = clusterRadius * 0.4;
+          markerX = clusterRadius + distanceFromCenter * Math.cos(angle);
+          markerY = clusterRadius + distanceFromCenter * Math.sin(angle);
+        }
+
+        return `<circle cx="${markerX}" cy="${markerY}" r="${markerRadius}" fill="${color}" data-color="${color}" />`;
+      });
+    }
+
+
+    function getEmotionColor(emotion) {
+      const colors = {
+        happy: "#FDD761",
+        excited: "#FDD761",
+        mesmerized: "#6B9B60",
+        calm: "#6B9B60",
+        connected: "#6B9B60",
+        nostalgic: "#6B9B60",
+        anger: "#FF7070",
+        annoyed: "#FF7070",
+        sad: "#70C3FF",
+        disociated: "#70C3FF",
+        overwhelmed: "#70C3FF",
+        shame: "#F2A5E1",
+        anxiety: "#F2A5E1",
+        sinking: "#F2A5E1",
+        // Add colors for other emotions as needed
+      };
+
+      return colors[emotion];
+    }
+
+    function createTooltipContent(location) {
+  const date = location.Date ? `Date: ${location.Date}` : '';
+  const journalEntry = location["Journal entry"] ? `<div> ${location["Journal entry"]}</div>` : '';
+
+  const emotions = createEmotionTooltip(location);
+
+  // Create a div element for the tooltip content
+  const tooltipContentDiv = document.createElement('div');
+  tooltipContentDiv.style.maxWidth = '400px';
+  tooltipContentDiv.style.backgroundColor = '#FFF9E8';
+  tooltipContentDiv.style.color = '#423107';
+  tooltipContentDiv.style.padding = '12px';
+  tooltipContentDiv.style.borderRadius = '12px';
+  tooltipContentDiv.style.margin = 'none';
+
+  // Create a div for the location details
+  const locationDetailsDiv = document.createElement('div');
+  locationDetailsDiv.style.marginBottom = '10px';
+  locationDetailsDiv.innerHTML = `<strong>${location.Place}</strong> - ${date}`;
+  tooltipContentDiv.appendChild(locationDetailsDiv);
+
+  // Create a div for the emotions with flexbox
+  const emotionsDiv = document.createElement('div');
+  emotionsDiv.style.display = 'flex';
+  emotionsDiv.style.flexWrap = 'wrap';
+  emotionsDiv.style.gap = '12px';
+  emotionsDiv.style.alignItems = 'center'; // Align items in the center vertically
+  emotionsDiv.style.marginBottom = '12px';
+  emotionsDiv.innerHTML = emotions;
+  tooltipContentDiv.appendChild(emotionsDiv);
+
+  // Append journal entry if it exists
+  tooltipContentDiv.innerHTML += journalEntry;
+
+  return tooltipContentDiv.outerHTML;
+}
+
+function createEmotionTooltip(location) {
+  const emotions = Object.keys(location).filter(emotion => emotion !== "Place" && emotion !== "Latitude" && emotion !== "Longitude" && location[emotion].toLowerCase() === "yes");
+
+  // Create a span for each emotion with a corresponding dot
+  const emotionSpans = emotions.map(emotion => `<div style="display: flex; align-items: center;"><span style="margin-right: 4px; width: 15px; height: 15px; border-radius: 50px; background-color: ${getEmotionColor(emotion)}; margin-right: 4px;"></span>${emotion}</div>`);
+
+  // Join the spans to form the tooltip content
+  return emotionSpans.join('');
+}
+
+
+    const styles = {
+      default: [],
+      silver: [{
+          elementType: "geometry",
+          stylers: [{
+            color: "#D8E7D2"
+          }],
+        },
+        {
+          elementType: "labels.icon",
+          stylers: [{
+            visibility: "off"
+          }],
+        },
+        {
+          elementType: "labels.text.fill",
+          stylers: [{
+            color: "#7E775C"
+          }],
+        },
+        {
+          elementType: "labels.text.stroke",
+          stylers: [{
+            visibility: "off"
+          }],
+        },
+        {
+          featureType: "administrative.land_parcel",
+          elementType: "labels.text.fill",
+          stylers: [{
+            color: "#7E775C"
+          }],
+        },
+        {
+          featureType: "administrative.country",
+          elementType: "geometry",
+          stylers: [{
+            color: "#DDDBD5"
+          }],
+        },
+
+        {
+          featureType: "poi",
+          elementType: "geometry",
+          stylers: [{
+            color: "#A9C09A"
+          }],
+        },
+        {
+          featureType: "poi",
+          elementType: "labels.text.fill",
+          stylers: [{
+            color: "#7E775C"
+          }],
+        },
+        {
+          featureType: "poi.park",
+          elementType: "geometry",
+          stylers: [{
+            color: "#A9C09A"
+          }],
+        },
+        {
+          featureType: "poi.park",
+          elementType: "labels.text.fill",
+          stylers: [{
+            visibility: "off"
+          }],
+        },
+        {
+          featureType: "road",
+          elementType: "geometry",
+          stylers: [{
+            color: "#D8DCC6"
+          }],
+        },
+        {
+          featureType: "road.arterial",
+          elementType: "labels.text.fill",
+          stylers: [{
+            color: "#7E775C"
+          }],
+        },
+        {
+          featureType: "road.highway",
+          elementType: "geometry",
+          stylers: [{
+            color: "#D9A185"
+          }],
+        },
+        {
+          featureType: "road.highway",
+          elementType: "labels.text.fill",
+          stylers: [{
+            color: "#7E775C"
+          }],
+        },
+        {
+          featureType: "road.local",
+          elementType: "labels.text.fill",
+          stylers: [{
+            color: "#7E775C"
+          }],
+        },
+        {
+          featureType: "transit.line",
+          elementType: "geometry",
+          stylers: [{
+            color: "#DDDBD5"
+          }],
+        },
+        {
+          featureType: "transit.station",
+          elementType: "geometry",
+          stylers: [{
+            color: "#DDDBD5"
+          }],
+        },
+        {
+          featureType: "water",
+          elementType: "geometry",
+          stylers: [{
+            color: "#89C1B5"
+          }],
+        },
+        {
+          featureType: "water",
+          elementType: "labels.text.fill",
+          stylers: [{
+            color: "#7E775C"
+          }],
+        },
+      ],
+    }
+  </script>
+  <style>
+    #map {
+      height: 100%;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+
+    .gm-style .gm-style-iw-c {
+        border-width: 100px!important;
+        padding: 0!important;
+        margin: 0!important;
+        background-color: #2E2B20!important;
+        border-radius: 12px!important;
+        z-index: 3!important;
+    }
+
+    .gm-style .gm-style-iw-d {
+        border-width: 0!important;
+        padding: 0!important;
+        margin: 0!important;
+        right: 0!important;
+        bottom: 0!important;
+        z-index: 3!important;
+    }
+
+    .gm-style-iw {
+     width: auto !important;
+    top: 0 !important;
+     left: 0 !important;
+     z-index: 3!important;
+    }
+
+    .gm-style-iw-d{
+        border-width: 0px!important;
+        border-color: #2E2B20!important;
+        padding: 0!important;
+        padding-right: 0!important;
+        margin: 0!important;
+        right: 0!important;
+        bottom: 0!important;
+        overflow: hidden!important;
+        z-index: 3!important;
+    }
+
+    .gm-style-iw-tc::after{
+        padding: 0;
+    }
+
+    .gm-style-iw button.gm-ui-hover-effect img {
+    display: none !important;
+    }
+
+    .gm-style-iw button.gm-ui-hover-effect {
+    opacity: 0 !important;
+  }
+
+
+.gm-style-iw-tc::after{
+    display: none!important;
+}
+
+#header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background-color: #333;
+      color: #423107;
+      font-family: sans-serif;
+      font-size: 12px;
+      font-style: normal;
+      font-weight: 1000;
+      line-height: normal;
+      width: 300px;
+      padding: 12px 28px;
+      text-align: left;
+      margin: 40px 0px 0px 40px;
+      border-radius: 20px;
+      border: 4px solid #DAA185;
+      background: #FFF9E8;
+      z-index: 0;
+    }
+
+    #emotions {
+      margin-top: 20px;
+    }
+
+    #emotions {
+      margin-top: 12px;
+    }
+
+    .emotion-container {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 14px;
+      font-family: sans-serif;
+    }
+
+    .emotion-dot {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      margin-right: 12px;
+    }
+
+    .footer {
+      position: sticky;
+      bottom: 40px;
+      width: 160px;
+      background-color: #333;
+      text-decoration: none;
+      font-family: sans-serif;
+      font-size: 12px;
+      font-style: normal;
+      font-weight: 1000;
+      line-height: normal;
+      padding: 12px 28px;
+      text-align: left;
+      margin: 40px 0px 0px 40px;
+      border-radius: 16px;
+      border: 4px solid #DAA185;
+      background: #FFF9E8;
+    }
+
+    .footer a{
+      color: #423107;
+      text-decoration: none;
+      font-size: medium;
+      font-weight: regular;
+    }
+  
+    .footer:hover{
+      background-color: #e4dfd0;
+    }
+  </style>
+</head>
+
+
+<body>
+  <div id="map"></div>
+  <div class="footer"><a href="index.html">Who made this? 👀 </a></div>
+  <div id="header"><h1>Everywhere I've been<br>Everything I've felt</h1>
+    <div id="emotions">
+      <div class="emotion-container">
+        <span class="emotion-dot" style="background-color: #FDD761;"></span>happy, excited
+      </div>
+      <div class="emotion-container">
+        <span class="emotion-dot" style="background-color: #6B9B60;"></span> nostalgic, mesmerized, calm, collected
+      </div>
+      <div class="emotion-container">
+        <span class="emotion-dot" style="background-color: #FF7070;"></span> anger, annoyed
+      </div>
+      <div class="emotion-container">
+        <span class="emotion-dot" style="background-color: #F2A5E1;"></span> shame, anxiety, overwhelm
+      </div>
+      <div class="emotion-container">
+        <span class="emotion-dot" style="background-color: #89C1B5;"></span> sad, disociated, sinking
+      </div>
+
+
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD0slmzuItTDOzsi1VAWLlfNN2SaQoxVQY&callback=initMap&v=weekly" defer></script>
+</body>
+
+</html>
+  
