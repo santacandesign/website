@@ -117,6 +117,17 @@
           waffleContainer.selectAll(".waffle-cell").style("opacity", 1);
         });
 
+        const chartContainer = document.getElementById("chart-container");
+        d3.select(document).on("click", function (event) {
+          // Check if the click is outside the chart container
+          if (!chartContainer.contains(event.target)) {
+            // Hide tooltip on click outside
+            tooltip.transition().duration(500).style("opacity", 0);
+            // Reset opacity for all cells on click outside
+            waffleContainer.selectAll(".waffle-cell").style("opacity", 1);
+          }
+        });
+
       // Set background color for each cell
       cells.style("background-color", d => {
         // Conditionally set color for "Bleeding"
