@@ -134,7 +134,7 @@ align-items: flex-start;
 /* Center both chart and legend horizontally */
 /* Center both chart and legend vertically */
 height: 500px;
-width: 740px;
+width: 700px;
 overflow: visible;
 /* Hide overflow to prevent scrolling */
 z-index: 1;
