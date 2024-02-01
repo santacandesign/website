@@ -1,0 +1,211 @@
+img {
+    position: fixed; /* or 'absolute' based on your preference */
+    top: 0;
+    left: 0;
+    height: 2000px;
+    width: 2000px;
+    z-index: -2; 
+}
+
+
+body {
+background-color: #FAD3BC;
+overflow: hidden;
+}
+
+#header {
+padding: 8px 40px;
+font-family: 'Love Ya Like A Sister', monospace;
+font-size: 48px;
+color: #452C2B;
+}
+
+#h2 {
+padding: 8px 40px;
+font-family: 'Love Ya Like A Sister', monospace;
+font-size: 32px;
+color: #452C2B;
+}
+
+#home {
+font-family: 'Love Ya Like A Sister', monospace;
+font-size: 20px;
+position: fixed;
+bottom: 40px;
+width: 360px;
+left: 50%;
+transform: translateX(-30%);
+color: #452C2B;
+text-decoration: none;
+
+}
+
+#footer {
+position: fixed;
+bottom: 80px;
+width: 360px;
+left: 50%;
+transform: translateX(-60%);
+color: #452C2B;
+text-decoration: none;
+font-family: 'Love Ya Like A Sister', monospace;
+font-size: 20px;
+font-style: normal;
+line-height: normal;
+padding: 12px 24px;
+text-align: center;
+margin: 40px 0px 0px 40px;
+border-radius: 100px;
+/* border: 4px solid #948753; */
+background: #fefefe;
+}
+
+.legend-item {
+display: flex;
+color: #452C2B;
+font-family: 'Love Ya Like A Sister';
+font-size: 24px;
+letter-spacing: 1px;
+align-items: flex-start;
+gap: 8px;
+z-index: 1;
+}
+
+a:link {
+  text-decoration: none;
+  color: #452C2B;
+}
+
+a:visited{
+  color: #452C2B;
+}
+
+.legend-container {
+display: flex;
+flex-direction: column;
+/* Align legend items horizontally */
+gap: 16px;
+align-items: left;
+z-index: 1;
+width: 100vh;
+}
+
+
+
+.legend-color {
+width: 24px;
+height: 24px;
+flex-shrink: 0;
+z-index: 1;
+}
+
+.color-box {
+width: 20px;
+height: 20px;
+display: flex;
+flex-direction: row;
+}
+
+  /* Define CSS styles for the chart */
+.waffle-cell {
+width: 52px;
+/* Adjusted width to include the 4px gap */
+height: 52px;
+/* Adjusted height to include the 4px gap */
+margin: 2px;
+/* Adjusted margin to create a 4px gap */
+position: relative;
+display: inline-block;
+transition: opacity 0.3s ease-in-out; /* Add a smooth transition for opacity changes */
+}
+
+#container {
+display: flex;
+flex-direction: column;
+align-items: center;
+}
+
+#chart-container {
+display: flex;
+flex-direction: row;
+gap: 40px;
+/* Stack chart and legend vertically */
+align-items: flex-start;
+/* Center both chart and legend horizontally */
+/* Center both chart and legend vertically */
+height: 500px;
+width: 740px;
+overflow: visible;
+/* Hide overflow to prevent scrolling */
+z-index: 1;
+}
+
+#waffle-chart {
+width: 800px;
+}
+
+@media (min-width: 861px) {
+#header {
+  margin-top: 40px;
+  margin-left: 40px;
+}
+
+#h2 {
+  margin-left: 40px;
+}
+
+#chart-container{
+  padding-top: 20px;
+  justify-content: center;
+
+}
+
+
+}
+
+/* Style for screens 600px and below (mobile devices) */
+@media (max-width: 860px) {
+#header {
+  margin-top: 12px;
+  font-size: 24px;
+}
+
+#h2 {
+  font-size: 20px;
+  padding-top:0px ;
+}
+
+.legend-item{
+  font-size: 16px;
+}
+
+#footer{
+  font-size: 16px;
+  width: 300px
+}
+
+#home {
+  font-size: 16px;
+}
+
+.waffle-cell{
+  height: 40px;
+  width: 40px;
+}
+
+#chart-container {
+  flex-direction: column;
+  padding-top: 20px;
+  width: 280px;
+  
+}
+
+#waffle-chart {
+width: 300px;
+}
+
+#home {
+  transform: translateX(-18%);
+}
+
+}
